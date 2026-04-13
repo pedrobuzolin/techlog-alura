@@ -1,6 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
-from app.routes import cliente
+from app.routes import cliente, login
+
+templates = Jinja2Templates(directory="templates")
 
 app = FastAPI(
     title="Techlog Solutions API",
@@ -8,25 +12,22 @@ app = FastAPI(
     version="1.0.0",
 )
 
+app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(cliente.router)
+app.include_router(cliente.front_router)
+app.include_router(login.router)
 
-@app.get("/")
+@app.get("/health")
 async def health_check():
     return {"status": "OK"}
 
-@app.get("/front", response_class=HTMLResponse)
-async def front_page():
-    html_content = """
-    <html>
-        <head>
-            <title>TechLog Solutions</title>
-        </head>
-        <body>
-            <h1>🔧 TechLog Solutions</h1>
-            <p>Sistema de Gestão de Ordens de Serviço</p>
-            <p>Status: <strong>Operacional</strong></p>
-        </body>
-    </html>
-    """
-
-    return html_content
+@app.get("/", response_class=HTMLResponse)
+async def front_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+        context={
+            "titulo": "TechLog Solutions CRM",
+            "versao": "1.0.0"
+        }
+    )

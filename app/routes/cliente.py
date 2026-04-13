@@ -3,8 +3,17 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.models.clientes import Cliente, ClienteCriarAtualizar
 from app.database.cliente_repositorio import ClienteRepositorio
 from app.dependencias import obter_cliente_repositorio
+from fastapi.responses import HTMLResponse
+from fastapi.requests import Request
+from fastapi.templating import Jinja2Templates
+
+templates = Jinja2Templates(directory="templates")
 
 router = APIRouter(
+    prefix="/api/clientes"
+)
+
+front_router = APIRouter(
     prefix="/clientes"
 )
 
@@ -42,3 +51,33 @@ async def deletar_cliente(cliente_repositorio: Annotated[ClienteRepositorio, Dep
     sucesso = await cliente_repositorio.deletar_cliente(cliente_id)
     if not sucesso:
         raise HTTPException(status_code=404, detail="Cliente não encontrado!")
+
+@front_router.get("/", response_class=HTMLResponse)
+async def pagina_clientes(request: Request, cliente_repositorio:Annotated[Cliente, Depends(obter_cliente_repositorio)]):
+    clientes = await cliente_repositorio.listar_clientes()
+    return templates.TemplateResponse(
+        request=request,
+        name="clientes.html",
+        context={
+            "clientes": clientes,
+            "titulo": "Lista de Clientes" 
+        }
+    )
+
+@front_router.get("/novo", response_class=HTMLResponse)
+async def pagina_criar_cliente(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="cleintes-form.html"
+    )
+
+@front_router.get("/{cliente_id}", response_class=HTMLResponse)
+async def pagina_editar_cliente(request: Request, cliente_id: int, cliente_repositorio:Annotated[Cliente, Depends(obter_cliente_repositorio)]):
+    cliente = await cliente_repositorio.obter_cliente(cliente_id)
+    return templates.TemplateResponse(
+        request=request,
+        name="clientes-form.html",
+        context={
+            "cliente": cliente
+        }
+    )
