@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from app.routes import cliente, login, registro
+from app.autenticacao_middleware import AuthenticationToken
 
 templates = Jinja2Templates(directory="templates")
 
@@ -13,6 +14,8 @@ app = FastAPI(
 )
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.add_middleware(AuthenticationToken)
+
 app.include_router(cliente.router)
 app.include_router(cliente.front_router)
 app.include_router(login.router)
@@ -32,3 +35,9 @@ async def front_page(request: Request):
             "versao": "1.0.0"
         }
     )
+
+@app.get("/logout")
+async def logout():
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie("session_token")
+    return response
